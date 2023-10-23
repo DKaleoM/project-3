@@ -20,6 +20,9 @@ test:
 run:
 	@(make restart)
 
+logs:
+	@(cd vocab; docker logs $$(cat ../dockerContainer.txt))
+
 clean:
 	@(cd vocab; docker stop $$(docker ps -a -q); docker rm $$(docker ps -a -q))
 
