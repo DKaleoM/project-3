@@ -14,7 +14,7 @@ start:
 stop:
 	@(cd vocab; docker stop $$(cat ../dockerContainer.txt))
 
-test:
+terminal:
 	@(cd vocab; docker exec -it $$(cat ../dockerContainer.txt) /bin/bash)
 
 run:
