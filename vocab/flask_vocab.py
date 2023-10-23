@@ -5,6 +5,7 @@ from a scrambled string)
 """
 
 import flask
+from flask import request
 import logging
 
 # Our modules
@@ -79,7 +80,7 @@ def success():
 #   a JSON request handler
 #######################
 
-@app.route("/_check", methods=["POST"])
+@app.route("/_check")
 def check():
     """
     User has submitted the form with a word ('attempt')
@@ -92,35 +93,50 @@ def check():
     app.logger.debug("Entering check")
 
     # The data we need, from form and from cookie
-    text = flask.request.form["attempt"]
+    text = request.args.get("word", type=str)
+    matches = request.args.getlist("matches[]", type=str)
     jumble = flask.session["jumble"]
-    matches = flask.session.get("matches", [])  # Default to empty list
+
+    app.logger.debug(str(request.args))
+    app.logger.debug(str(request))
+
+    app.logger.debug("matches: "+str(matches))
+    for match in matches:
+        app.logger.debug(match)
 
     # Is it good?
     in_jumble = LetterBag(jumble).contains(text)
     matched = WORDS.has(text)
 
+    #extra messages 
+    messages = []
+
     # Respond appropriately
-    if matched and in_jumble and not (text in matches):
+    if matched and in_jumble and not(text in matches):
         # Cool, they found a new word
         matches.append(text)
         flask.session["matches"] = matches
     elif text in matches:
-        flask.flash("You already found {}".format(text))
+        messages.append("You already found {}".format(text))
     elif not matched:
-        flask.flash("{} isn't in the list of words".format(text))
+        messages.append("{} isn't in the list of words".format(text))
     elif not in_jumble:
-        flask.flash(
+        messages.append(
             '"{}" can\'t be made from the letters {}'.format(text, jumble))
     else:
         app.logger.debug("This case shouldn't happen!")
         assert False  # Raises AssertionError
 
     # Choose page:  Solved enough, or keep going?
-    if len(matches) >= flask.session["target_count"]:
-       return flask.redirect(flask.url_for("success"))
-    else:
-       return flask.redirect(flask.url_for("keep_going"))
+    succeded = len(matches) >= flask.session["target_count"]
+
+    app.logger.debug("matches: ");
+    for match in matches:
+        app.logger.debug(match)
+
+    rslt = {"matches":matches, "messages":messages, "success":succeded}
+    
+    return flask.jsonify(result = rslt)
 
 
 ###############
